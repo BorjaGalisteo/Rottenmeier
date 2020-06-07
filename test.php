@@ -10,14 +10,11 @@ if (!file_exists(__DIR__ . '/vendor/autoload.php')) {
     throw new Exception(sprintf('Please run "composer require google/apiclient:~2.0" in "%s"', __DIR__));
 }
 require_once __DIR__ . '/vendor/autoload.php';
+require_once 'config.php';
 
 
-$channel_id = 'UCWhKWA_zR6c-H1c4kcGj6KQ';
-
-
-function getClient()
+function getClient($developer_key)
 {
-    require_once 'config.php';
     $client = new Google_Client();
     $client->setApplicationName('rottenmeier');
     $client->setDeveloperKey($developer_key);
@@ -38,9 +35,9 @@ function getClient()
     return $client;
 }
 
-function generateAccessTokenByURL()
+function generateAccessTokenByURL($developer_key)
 {
-    $client = getClient();
+    $client = getClient($developer_key);
 
     // Request authorization from the user.
     $authUrl = $client->createAuthUrl();
@@ -54,9 +51,9 @@ function generateAccessTokenByURL()
     return $accessToken;
 }
 
-function refreshAccessTokenIfExpired($accessToken)
+function refreshAccessTokenIfExpired($accessToken,$developer_key)
 {
-    $client = getClient();
+    $client = getClient($developer_key);
     $client->setAccessToken($accessToken);
 
     if (!$client->isAccessTokenExpired()) {
@@ -75,20 +72,30 @@ function refreshAccessTokenIfExpired($accessToken)
 
 }
 
-function getAccessToken()
+function getAccessToken($developer_key)
 {
     if (!file_exists("./token.json")) {
-        $accessToken = generateAccessTokenByURL();
+        $accessToken = generateAccessTokenByURL($developer_key);
         return $accessToken;
     }
 
     $accessToken = json_decode(file_get_contents("./token.json"), true);
-    $accessToken = refreshAccessTokenIfExpired($accessToken);
+    $accessToken = refreshAccessTokenIfExpired($accessToken, $developer_key);
     return $accessToken;
 }
 
+function getVideosPages($queryParams,$service, $pages)
+{
+    $response = $service->search->listSearch('id', $queryParams);
+    $queryParams['pageToken'] = $response['nextPageToken'];
+    $pages[] = $response;
+    if (null == $queryParams['pageToken']){
+        return $pages;
+    }
+    getVideosPages($queryParams, $service, $pages);
+}
 
-$accessToken = getAccessToken();
+$accessToken = getAccessToken($developer_key);
 
 
 $client = new Google_Client();
@@ -98,38 +105,33 @@ $service = new Google_Service_YouTube($client);
 
 
 $queryParams = [
-    'channelId'  => $channel_id,
+    'channelId' => $channel_id,
     'maxResults' => 50,
 ];
-$pages = [];
-$response = $service->search->listSearch('id', $queryParams);
-$nextPage = $response['nextPageToken'];
-$pages[] = $response;
-while (null != $nextPage){
-    $queryParams['pageToken'] = $nextPage;
-    $response = $service->search->listSearch('id', $queryParams);
-    $nextPage = $response['nextPageToken'];
-    $pages[] = $response;
-}
+
+$pages_with_videos = getVideosPages($queryParams, $service, []);
+
 $videos_count = 0;
 $comments_count = 0;
-foreach ($pages as $page){
+
+
+foreach ($pages_with_videos as $page) {
     foreach ($page['items'] as $videos) {
         $videos_count++;
         $video_id = $videos['id']['videoId'];
         if (null != $video_id) {
             $queryParams = [
-                'videoId'    => $video_id,
+                'videoId' => $video_id,
                 'maxResults' => 100,
             ];
-            $response    = $service->commentThreads->listCommentThreads('snippet,replies', $queryParams);
+            $response = $service->commentThreads->listCommentThreads('snippet,replies', $queryParams);
             $comments_pages = [];
             $comments_pages[] = $response['items'];
             $nextPageToken_comments = $response['nextPageToken'];
 
-            while(null !== $nextPageToken_comments) {
+            while (null !== $nextPageToken_comments) {
                 $queryParams['pageToken'] = $nextPageToken_comments;
-                $response    = $service->commentThreads->listCommentThreads('snippet,replies', $queryParams);
+                $response = $service->commentThreads->listCommentThreads('snippet,replies', $queryParams);
                 $comments_pages[] = $response['items'];
                 $nextPageToken_comments = $response['nextPageToken'];
             }
@@ -146,4 +148,4 @@ foreach ($pages as $page){
         }
     }
 }
-echo $comments_count . " comments analyzed in " . $videos_count . " videos.". PHP_EOL;
+echo $comments_count . " comments analyzed in " . $videos_count . " videos." . PHP_EOL;
