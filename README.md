@@ -2,6 +2,9 @@
 
 Rottermeier is a PHP script that helps you to delete all these comments that you doesn't want in your videos. Give Rottenmeier a list of words and all comments that contain these words will be deleted.
 
+Who's RottenMeier?
+Fräulein Rottenmeier is Herr Sesemann's stern, unbending housekeeper. She is firmly in charge of running the household where Heidi has been invited to stay as companion to Herr Sesemann's invalid daughter, Clara.
+
 Rottenmeier was created by BorjaGalisteo.
 [Visit my channel ](http://www.youtube.com/borjagalisteo)
 
