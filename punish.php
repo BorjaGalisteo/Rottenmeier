@@ -132,7 +132,7 @@ foreach ($pages_with_videos as $page) {
             foreach ($comments_pages as $items) {
                 foreach ($items as $item) {
                     $comments_count++;
-                    $pos = strpos($item['snippet']['topLevelComment']['snippet']['textOriginal'], 'mierda');
+                    $pos = strpos($item['snippet']['topLevelComment']['snippet']['textOriginal'], $curse);
                     if ($pos !== false) {
                         echo $item['snippet']['topLevelComment']['id'] . ' ' . $item['snippet']['topLevelComment']['snippet']['authorDisplayName'] . ' DIJO: ' . $item['snippet']['topLevelComment']['snippet']['textOriginal'] . PHP_EOL;
                     }
