@@ -12,6 +12,29 @@ if (!file_exists(__DIR__ . '/vendor/autoload.php')) {
 require_once __DIR__ . '/vendor/autoload.php';
 require_once 'config.php';
 
+$delete = false;
+$banAuthor = false;
+if (isset($argv[1]) and "delete" == $argv[1]) {
+    $delete = true;
+    $message_confirm = 'All comments that contains the word ' . $curse . '. Are you sure? [yes/no]: ';
+    if (isset($argv[2]) and "ban" == $argv[2]) {
+        $banAuthor = true;
+        $message_confirm = 'All comments that contains the word ' . $curse . ', and the author will be BANNED. Are you sure? [yes/no]: ';
+    }
+}
+
+
+print($message_confirm);
+$confirmation = trim(fgets(STDIN));
+
+if ("yes" != $confirmation && "no" != $confirmation) {
+    echo "not valid option.";
+    exit;
+}
+if ("no" == $confirmation) {
+    echo "Nothing to do... exit.";
+    exit;
+}
 
 function getClient($developer_key)
 {
@@ -51,7 +74,7 @@ function generateAccessTokenByURL($developer_key)
     return $accessToken;
 }
 
-function refreshAccessTokenIfExpired($accessToken,$developer_key)
+function refreshAccessTokenIfExpired($accessToken, $developer_key)
 {
     $client = getClient($developer_key);
     $client->setAccessToken($accessToken);
@@ -84,22 +107,23 @@ function getAccessToken($developer_key)
     return $accessToken;
 }
 
-function getVideosPages($queryParams,$service, $pages)
+function getVideosPages($queryParams, $service, $pages)
 {
     $response = $service->search->listSearch('id', $queryParams);
     $queryParams['pageToken'] = $response['nextPageToken'];
     $pages[] = $response;
-    if (null == $queryParams['pageToken']){
+    if (null == $queryParams['pageToken']) {
         return $pages;
     }
     return getVideosPages($queryParams, $service, $pages);
 }
 
-function getCommentsPages($queryParams,$service, $pages){
+function getCommentsPages($queryParams, $service, $pages)
+{
     $response = $service->commentThreads->listCommentThreads('snippet,replies', $queryParams);
     $queryParams['pageToken'] = $response['nextPageToken'];
     $pages[] = $response['items'];
-    if (null == $queryParams['pageToken']){
+    if (null == $queryParams['pageToken']) {
         return $pages;
     }
     return getCommentsPages($queryParams, $service, $pages);
@@ -109,6 +133,7 @@ $accessToken = getAccessToken($developer_key);
 
 $client = new Google_Client();
 $client->setAccessToken($accessToken);
+
 // Define service object for making API requests.
 $service = new Google_Service_YouTube($client);
 $queryParams = [
@@ -119,6 +144,7 @@ $pages_with_videos = getVideosPages($queryParams, $service, []);
 
 $videos_count = 0;
 $comments_count = 0;
+$comments_to_delete = [];
 foreach ($pages_with_videos as $page) {
     foreach ($page['items'] as $videos) {
         $videos_count++;
@@ -134,7 +160,8 @@ foreach ($pages_with_videos as $page) {
                     $comments_count++;
                     $pos = strpos($item['snippet']['topLevelComment']['snippet']['textOriginal'], $curse);
                     if ($pos !== false) {
-                        echo $item['snippet']['topLevelComment']['id'] . ' ' . $item['snippet']['topLevelComment']['snippet']['authorDisplayName'] . ' DIJO: ' . $item['snippet']['topLevelComment']['snippet']['textOriginal'] . PHP_EOL;
+                        $comments_to_delete[] = $item['snippet']['topLevelComment']['id'];
+                        echo $item['snippet']['topLevelComment']['id'] . ' ' . $item['snippet']['topLevelComment']['snippet']['authorDisplayName'] . ' SAID: ' . $item['snippet']['topLevelComment']['snippet']['textOriginal'] . PHP_EOL;
                     }
                 }
             }
@@ -142,4 +169,13 @@ foreach ($pages_with_videos as $page) {
         }
     }
 }
-echo $comments_count . " comments analyzed in " . $videos_count . " videos." . PHP_EOL;
+echo $comments_count . " comments analyzed in " . $videos_count . " videos (" . count($comments_to_delete) . " MATCHS)" . PHP_EOL;
+if ($delete) {
+    $comments_deleted = 0;
+    foreach ($comments_to_delete as $comment_id) {
+        $comments_deleted++;
+        $service->comments->setModerationStatus($comment_id, 'rejected', ['banAuthor' => $banAuthor]);
+    }
+    echo $comments_deleted . " COMMENTS DELETED " . PHP_EOL;
+}
+
