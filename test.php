@@ -92,29 +92,33 @@ function getVideosPages($queryParams,$service, $pages)
     if (null == $queryParams['pageToken']){
         return $pages;
     }
-    getVideosPages($queryParams, $service, $pages);
+    return getVideosPages($queryParams, $service, $pages);
+}
+
+function getCommentsPages($queryParams,$service, $pages){
+    $response = $service->commentThreads->listCommentThreads('snippet,replies', $queryParams);
+    $queryParams['pageToken'] = $response['nextPageToken'];
+    $pages[] = $response['items'];
+    if (null == $queryParams['pageToken']){
+        return $pages;
+    }
+    return getCommentsPages($queryParams, $service, $pages);
 }
 
 $accessToken = getAccessToken($developer_key);
-
 
 $client = new Google_Client();
 $client->setAccessToken($accessToken);
 // Define service object for making API requests.
 $service = new Google_Service_YouTube($client);
-
-
 $queryParams = [
     'channelId' => $channel_id,
     'maxResults' => 50,
 ];
-
 $pages_with_videos = getVideosPages($queryParams, $service, []);
 
 $videos_count = 0;
 $comments_count = 0;
-
-
 foreach ($pages_with_videos as $page) {
     foreach ($page['items'] as $videos) {
         $videos_count++;
@@ -124,17 +128,7 @@ foreach ($pages_with_videos as $page) {
                 'videoId' => $video_id,
                 'maxResults' => 100,
             ];
-            $response = $service->commentThreads->listCommentThreads('snippet,replies', $queryParams);
-            $comments_pages = [];
-            $comments_pages[] = $response['items'];
-            $nextPageToken_comments = $response['nextPageToken'];
-
-            while (null !== $nextPageToken_comments) {
-                $queryParams['pageToken'] = $nextPageToken_comments;
-                $response = $service->commentThreads->listCommentThreads('snippet,replies', $queryParams);
-                $comments_pages[] = $response['items'];
-                $nextPageToken_comments = $response['nextPageToken'];
-            }
+            $comments_pages = getCommentsPages($queryParams, $service, []);
             foreach ($comments_pages as $items) {
                 foreach ($items as $item) {
                     $comments_count++;
