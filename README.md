@@ -23,9 +23,12 @@ Rottenmeier was created by BorjaGalisteo.
 # How to use it
 
 If you want to see all comments that match, just use
-`php punish.php` 
-`php punish.php delete` will delete all comments that match
-`php punish.php delete ban` will delete all comments that match and BAN the author to avoid future comments.
+
+·`php punish.php` 
+
+·`php punish.php delete` will delete all comments that match (after confirmation)
+
+·`php punish.php delete ban` will delete all comments that match and BAN the author to avoid future comments.(after confirmation)
 
 # Disclaimer
 Depends on you channel size, the default API quota is not enough, Google just give 10.000 Request every 24H, if you want to increase the number you should send a form via [Google Console Developer](https://console.developers.google.com/)
