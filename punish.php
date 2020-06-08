@@ -21,19 +21,16 @@ if (isset($argv[1]) and "delete" == $argv[1]) {
         $banAuthor = true;
         $message_confirm = 'All comments that contains the word ' . $curse . ', and the author will be BANNED. Are you sure? [yes/no]: ';
     }
-}
-
-
-print($message_confirm);
-$confirmation = trim(fgets(STDIN));
-
-if ("yes" != $confirmation && "no" != $confirmation) {
-    echo "not valid option.";
-    exit;
-}
-if ("no" == $confirmation) {
-    echo "Nothing to do... exit.";
-    exit;
+    print($message_confirm);
+    $confirmation = trim(fgets(STDIN));
+    if ("yes" != $confirmation && "no" != $confirmation) {
+        echo "not valid option.";
+        exit;
+    }
+    if ("no" == $confirmation) {
+        echo "Nothing to do... exit.";
+        exit;
+    }
 }
 
 function getClient($developer_key)
@@ -129,6 +126,14 @@ function getCommentsPages($queryParams, $service, $pages)
     return getCommentsPages($queryParams, $service, $pages);
 }
 
+function contains($str, array $arr)
+{
+    foreach($arr as $a) {
+        if (stripos($str,$a) !== false) return true;
+    }
+    return false;
+}
+
 $accessToken = getAccessToken($developer_key);
 
 $client = new Google_Client();
@@ -158,8 +163,8 @@ foreach ($pages_with_videos as $page) {
             foreach ($comments_pages as $items) {
                 foreach ($items as $item) {
                     $comments_count++;
-                    $pos = strpos($item['snippet']['topLevelComment']['snippet']['textOriginal'], $curse);
-                    if ($pos !== false) {
+                    $match = contains($item['snippet']['topLevelComment']['snippet']['textOriginal'],$curse);
+                    if ($match !== false) {
                         $comments_to_delete[] = $item['snippet']['topLevelComment']['id'];
                         echo $item['snippet']['topLevelComment']['id'] . ' ' . $item['snippet']['topLevelComment']['snippet']['authorDisplayName'] . ' SAID: ' . $item['snippet']['topLevelComment']['snippet']['textOriginal'] . PHP_EOL;
                     }
